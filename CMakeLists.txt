@@ -7,7 +7,12 @@ project(timeseries_recording_toolkit)
 find_package(catkin REQUIRED)
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS 
+  system
+  thread
+  date_time
+  timer
+)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -179,3 +184,26 @@ catkin_package(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+include_directories(
+  include
+  ${Boost_INCLUDE_DIRS}
+)
+add_library(recorder
+  src/${PROJECT_NAME}/record_timeseries_data_to_file.cc
+)
+target_link_libraries(recorder
+  ${Boost_LIBRARIES}
+)
+
+add_executable(test_recorder 
+  src/test_recorder.cc
+)
+
+add_dependencies(test_recorder
+  recorder
+)
+
+target_link_libraries(test_recorder
+  recorder
+  ${Boost_LIBRARIES}
+)

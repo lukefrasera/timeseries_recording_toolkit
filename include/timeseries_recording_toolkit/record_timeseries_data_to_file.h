@@ -19,24 +19,55 @@ along with timeseries_recording_toolkit.  If not, see <http://www.gnu.org/licens
 #define INCLUDE_TIMESERIES_RECORDING_TOOLKIT_RECORD_TIMESERIES_DATA_TO_FILE_H_
 #include <stdint.h>
 #include <stdio.h>
+#include <stdarg.h>
+#include <string>
+#include <fstream>
+#include <queue>
 #include <boost/thread/thread.hpp>
+#include <boost/thread/mutex.hpp>
 #include <boost/date_time.hpp>
 
 namespace recording_toolkit {
-class Recorder {
+class PrintRecorder {
  public:
-  Recorder();
-  virtual ~Recorder();
+  PrintRecorder(const char *filename,
+                bool output_screen=false,
+                uint32_t queue_size=64);
+  virtual ~PrintRecorder();
 
-  virtual uint32_t FormatPrintStyle();
+  virtual uint32_t RecordPrintf(const char *fmt, ...);
   virtual uint32_t StartRecord();
   virtual uint32_t StopRecord();
+ private:
+  static void Worker(PrintRecorder *object);
+  virtual uint32_t RecordingWorker();
+  bool recording_;
+  bool screen_;
+  std::fstream file_;
+  std::queue<std::string> thread_queue_;
+  uint32_t queue_size_;
+  boost::thread *printing_thread;
+  boost::mutex queue_access;
 };
 
-class TimeSeriesRecorder : public Recorder {
- public:
-  TimeSeriesRecorder();
-  virtual ~TimeSeriesRecorder();
-};
+// class WatchRecorder {
+//  public:
+//   Recorder();
+//   virtual ~Recorder(const char *filename,
+//                     bool output_screen=false,
+//                     uint32_t queue_size=64);
+
+//   virtual uint32_t FormatStringPointers(const char *fmt, ...);
+//   virtual uint32_t StartRecord();
+//   virtual uint32_t StopRecord();
+//  private:
+//   bool recording;
+// };
+
+// class TimeSeriesRecorder : public WatchRecorder {
+//  public:
+//   TimeSeriesRecorder();
+//   virtual ~TimeSeriesRecorder();
+// };
 }  // namespace recording_toolkit
 #endif  // INCLUDE_TIMESERIES_RECORDING_TOOLKIT_RECORD_TIMESERIES_DATA_TO_FILE_H_
