@@ -30,21 +30,17 @@ along with timeseries_recording_toolkit.  If not, see <http://www.gnu.org/licens
 namespace recording_toolkit {
 class PrintRecorder {
  public:
-  PrintRecorder(const char *filename,
-                bool output_screen=false,
-                uint32_t queue_size=2048);
+  PrintRecorder(uint32_t queue_size=2048);
   virtual ~PrintRecorder();
 
   virtual uint32_t RecordPrintf(const char *fmt, ...);
   virtual uint32_t StartRecord();
   virtual uint32_t StopRecord();
- private:
+ protected:
   static void Worker(PrintRecorder *object);
   virtual uint32_t RecordingWorker();
   virtual void ProcessBufferQueue(std::queue<std::string> *buffer);
   bool recording_;
-  bool screen_;
-  std::fstream file_;
   std::queue<std::string> *thread_queue_ptr_, *thread_queue_buffer_ptr_;
   std::queue<std::string> queues[2];
   uint32_t queue_size_;
@@ -52,25 +48,18 @@ class PrintRecorder {
   boost::thread *printing_thread;
   boost::mutex queue_access;
 };
+class FilePrintRecorder : public PrintRecorder {
+ public:
+  FilePrintRecorder(
+                    const char* filename,
+                    uint32_t queue_size=2048);
+  virtual ~FilePrintRecorder();
 
-// class WatchRecorder {
-//  public:
-//   Recorder();
-//   virtual ~Recorder(const char *filename,
-//                     bool output_screen=false,
-//                     uint32_t queue_size=64);
+ protected:
+  virtual void ProcessBufferQueue(std::queue<std::string> *buffer);
 
-//   virtual uint32_t FormatStringPointers(const char *fmt, ...);
-//   virtual uint32_t StartRecord();
-//   virtual uint32_t StopRecord();
-//  private:
-//   bool recording;
-// };
-
-// class TimeSeriesRecorder : public WatchRecorder {
-//  public:
-//   TimeSeriesRecorder();
-//   virtual ~TimeSeriesRecorder();
-// };
+  std::string filename_;
+  std::ofstream fout;
+};
 }  // namespace recording_toolkit
 #endif  // INCLUDE_TIMESERIES_RECORDING_TOOLKIT_RECORD_TIMESERIES_DATA_TO_FILE_H_

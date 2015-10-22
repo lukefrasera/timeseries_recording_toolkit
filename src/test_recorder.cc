@@ -22,7 +22,7 @@ along with timeseries_recording_toolkit.  If not, see <http://www.gnu.org/licens
 #include "timeseries_recording_toolkit/record_timeseries_data_to_file.h"
 
 int main(int argc, char *argv[]) {
-  recording_toolkit::PrintRecorder output_test("test.txt");
+  recording_toolkit::PrintRecorder output_test;
   std::ofstream fout;
   fout.open("timing.txt");
 

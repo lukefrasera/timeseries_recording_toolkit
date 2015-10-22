@@ -20,7 +20,7 @@ along with timeseries_recording_toolkit.  If not, see <http://www.gnu.org/licens
 #define BUFFER_SIZE 2048
 #define MAX_BUFFER_SLEEP 1024
 #define SLEEP_TIME 100
-#define MAX_EXPO_FALLOFF 100
+#define MAX_EXPO_FALLOFF 80
 
 //  Swap macro  two swap the double buffer
 #define SWAP(A_PTR, B_PTR) do {                                                 \
@@ -36,14 +36,8 @@ typedef enum {
   NOT_RECORDING,
 } error_recording;
 
-PrintRecorder::PrintRecorder(
-    const char *filename,
-    bool output_screen,
-    uint32_t queue_size) {
-
-  screen_ = output_screen;
+PrintRecorder::PrintRecorder(uint32_t queue_size) {
   printing_thread = NULL;
-  file_.open(filename, std::fstream::out);
   queue_size_ = queue_size;
   thread_queue_ptr_ = &queues[0];
   thread_queue_buffer_ptr_ = &queues[1];
@@ -119,5 +113,26 @@ uint32_t PrintRecorder::StopRecord() {
   delete printing_thread;
   printing_thread = NULL;
   recording_ = false;
+}
+
+FilePrintRecorder::FilePrintRecorder(
+    const char* filename,
+    uint32_t queue_size) 
+    : PrintRecorder(queue_size) {
+  filename_ = filename;
+  fout.open(filename);
+}
+
+FilePrintRecorder::~FilePrintRecorder() {
+  fout.close();
+}
+
+void FilePrintRecorder::ProcessBufferQueue(std::queue<std::string> *buffer) {
+  std::string cat_str = "";
+  while (!buffer->empty()) {
+    cat_str += buffer->front();
+    buffer->pop();
+  }
+  fout.write(cat_str.c_str(), cat_str.length());
 }
 }  // namespace recording_toolkit
