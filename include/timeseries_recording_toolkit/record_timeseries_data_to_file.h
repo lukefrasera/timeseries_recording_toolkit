@@ -17,25 +17,27 @@ along with timeseries_recording_toolkit.  If not, see <http://www.gnu.org/licens
 */
 #ifndef INCLUDE_TIMESERIES_RECORDING_TOOLKIT_RECORD_TIMESERIES_DATA_TO_FILE_H_
 #define INCLUDE_TIMESERIES_RECORDING_TOOLKIT_RECORD_TIMESERIES_DATA_TO_FILE_H_
+#include <boost/thread/thread.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/date_time.hpp>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include <string>
 #include <fstream>
 #include <queue>
-#include <boost/thread/thread.hpp>
-#include <boost/thread/mutex.hpp>
-#include <boost/date_time.hpp>
 
 namespace recording_toolkit {
 class PrintRecorder {
  public:
-  PrintRecorder(uint32_t queue_size=2048);
+  explicit PrintRecorder(uint32_t queue_size = 2048);
   virtual ~PrintRecorder();
 
   virtual uint32_t RecordPrintf(const char *fmt, ...);
   virtual uint32_t StartRecord();
   virtual uint32_t StopRecord();
+
+  void WaitUntilFinishedWriting();
  protected:
   static void Worker(PrintRecorder *object);
   virtual uint32_t RecordingWorker();
@@ -52,7 +54,7 @@ class FilePrintRecorder : public PrintRecorder {
  public:
   FilePrintRecorder(
                     const char* filename,
-                    uint32_t queue_size=2048);
+                    uint32_t queue_size = 2048);
   virtual ~FilePrintRecorder();
 
  protected:

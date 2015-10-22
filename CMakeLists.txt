@@ -184,6 +184,11 @@ catkin_package(
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+if( ${LOG_INFO_PRINTING} )
+  set(LOG_INFO_PRINTING 1)
+  add_definitions(-DLOG_INFO_PRINTING=${LOG_INFO_PRINTING})
+endif( ${LOG_INFO_PRINTING} )
+
 include_directories(
   include
   ${Boost_INCLUDE_DIRS}
@@ -195,15 +200,31 @@ target_link_libraries(recorder
   ${Boost_LIBRARIES}
 )
 
-add_executable(test_recorder 
-  src/test_recorder.cc
+if( ${BUILD_TEST_PROGRAM} )
+  add_executable(test_recorder
+    src/test_recorder.cc
+  )
+
+  add_dependencies(test_recorder
+    recorder
+  )
+
+  target_link_libraries(test_recorder
+    recorder
+    ${Boost_LIBRARIES}
+  )
+endif( ${BUILD_TEST_PROGRAM} )
+
+# Mark executables and/or libraries for installation
+install(TARGETS recorder
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-add_dependencies(test_recorder
-  recorder
-)
-
-target_link_libraries(test_recorder
-  recorder
-  ${Boost_LIBRARIES}
+# Mark cpp header files for installation
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+  FILES_MATCHING PATTERN "*.h"
+  PATTERN ".hg" EXCLUDE
 )

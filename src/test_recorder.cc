@@ -16,15 +16,13 @@ You should have received a copy of the GNU General Public License
 along with timeseries_recording_toolkit.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <stdio.h>
-#include <fstream>
 #include <boost/timer/timer.hpp>
+#include <stdio.h>
+#include <iostream>
 #include "timeseries_recording_toolkit/record_timeseries_data_to_file.h"
 
 int main(int argc, char *argv[]) {
-  recording_toolkit::PrintRecorder output_test;
-  std::ofstream fout;
-  fout.open("timing.txt");
+  recording_toolkit::FilePrintRecorder output_test("test.txt");
 
   output_test.StartRecord();
 
@@ -34,8 +32,9 @@ int main(int argc, char *argv[]) {
     output_test.RecordPrintf("Hello this is me printing a number really fast %d\n", i);
   }
   timer.stop();
-  fout << "First Timing: " << timer.format() << std::endl;
+  output_test.WaitUntilFinishedWriting();
   output_test.StopRecord();
+  std::cout << "First Timing: " << timer.format() << std::endl;
 
   // timer.start();
   // for (int i = 0; i < 100000; ++i) {
@@ -43,6 +42,5 @@ int main(int argc, char *argv[]) {
   // }
   // timer.stop();
   // fout << "Second Timing: " << timer.format() << std::endl;
-  boost::this_thread::sleep(boost::posix_time::milliseconds(100000000));
   return 0;
 }

@@ -15,6 +15,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with timeseries_recording_toolkit.  If not, see <http://www.gnu.org/licenses/>.
 */
+#include "log.h"
 #include "timeseries_recording_toolkit/record_timeseries_data_to_file.h"
 
 #define BUFFER_SIZE 2048
@@ -23,11 +24,11 @@ along with timeseries_recording_toolkit.  If not, see <http://www.gnu.org/licens
 #define MAX_EXPO_FALLOFF 80
 
 //  Swap macro  two swap the double buffer
-#define SWAP(A_PTR, B_PTR) do {                                                 \
-  typeof(A_PTR) PTR = A_PTR;                                                    \
-  A_PTR = B_PTR;                                                                \
-  B_PTR = PTR;                                                                  \
-} while(0)                                                                      \
+#define SWAP(A_PTR, B_PTR) do {                                                \
+  typeof(A_PTR) PTR = A_PTR;                                                   \
+  A_PTR = B_PTR;                                                               \
+  B_PTR = PTR;                                                                 \
+} while (0)                                                                    \
 
 
 namespace recording_toolkit {
@@ -67,14 +68,13 @@ uint32_t PrintRecorder::RecordPrintf(const char *fmt, ...) {
 
 void PrintRecorder::Worker(PrintRecorder *object) {
   uint32_t sleep;
-  while(true) {
+  while (true) {
     sleep = object->RecordingWorker();
     boost::this_thread::sleep(boost::posix_time::milliseconds(sleep));
   }
 }
 
 uint32_t PrintRecorder::RecordingWorker() {
-  std::string front;
   static uint32_t count = 0;
   uint32_t result;
   uint32_t size = thread_queue_ptr_->size();
@@ -92,7 +92,7 @@ uint32_t PrintRecorder::RecordingWorker() {
     return SLEEP_TIME;
   } else {
     if (count < MAX_EXPO_FALLOFF) {count++;}
-    return pow(1.1,count+1);
+    return pow(1.1, count+1);
   }
 }
 
@@ -100,6 +100,7 @@ void PrintRecorder::ProcessBufferQueue(std::queue<std::string> *buffer) {
   std::string cat_str = "";
   while (!buffer->empty()) {
     cat_str += buffer->front();
+    LOG_INFO("%s", buffer->front().c_str());
     buffer->pop();
   }
   printf("%s", cat_str.c_str());
@@ -110,14 +111,25 @@ uint32_t PrintRecorder::StartRecord() {
   recording_ = true;
 }
 uint32_t PrintRecorder::StopRecord() {
-  delete printing_thread;
-  printing_thread = NULL;
+  if (printing_thread) {
+    printing_thread->interrupt();
+    delete printing_thread;
+    printing_thread = NULL;
+  }
   recording_ = false;
+}
+
+void PrintRecorder::WaitUntilFinishedWriting() {
+  if (printing_thread) {
+    while (!(queues[0].empty() && queues[1].empty())) {
+      boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+    }
+  }
 }
 
 FilePrintRecorder::FilePrintRecorder(
     const char* filename,
-    uint32_t queue_size) 
+    uint32_t queue_size)
     : PrintRecorder(queue_size) {
   filename_ = filename;
   fout.open(filename);
@@ -131,6 +143,7 @@ void FilePrintRecorder::ProcessBufferQueue(std::queue<std::string> *buffer) {
   std::string cat_str = "";
   while (!buffer->empty()) {
     cat_str += buffer->front();
+    LOG_INFO("%s", buffer->front().c_str());
     buffer->pop();
   }
   fout.write(cat_str.c_str(), cat_str.length());
