@@ -17,6 +17,19 @@ along with timeseries_recording_toolkit.  If not, see <http://www.gnu.org/licens
 */
 #include "timeseries_recording_toolkit/record_timeseries_data_to_file.h"
 
+#define BUFFER_SIZE 2048
+#define MAX_BUFFER_SLEEP 1024
+#define SLEEP_TIME 100
+#define MAX_EXPO_FALLOFF 100
+
+//  Swap macro  two swap the double buffer
+#define SWAP(A_PTR, B_PTR) do {                                                 \
+  typeof(A_PTR) PTR = A_PTR;                                                    \
+  A_PTR = B_PTR;                                                                \
+  B_PTR = PTR;                                                                  \
+} while(0)                                                                      \
+
+
 namespace recording_toolkit {
 typedef enum {
   SUCCESS = 1,
@@ -32,6 +45,8 @@ PrintRecorder::PrintRecorder(
   printing_thread = NULL;
   file_.open(filename, std::fstream::out);
   queue_size_ = queue_size;
+  thread_queue_ptr_ = &queues[0];
+  thread_queue_buffer_ptr_ = &queues[1];
 }
 PrintRecorder::~PrintRecorder() {
   if (printing_thread)
@@ -42,29 +57,25 @@ uint32_t PrintRecorder::RecordPrintf(const char *fmt, ...) {
   // Generate String to Add to file
   if (!recording_)
     return NOT_RECORDING;
-  // va_list args;
-  // va_start(args, fmt);
-  // int size = vsnprintf(NULL, 0, fmt, args);
-  // va_end(args);
+  // Static variable to avoid reallocation on each call
+  static char buffer[BUFFER_SIZE];
 
-  // char *buffer = new char[size];
-  // va_start(args, fmt);
-  // vsprintf(buffer, fmt, args);
-  // printf("%s\n", buffer);
-  queue_access.lock();
-  thread_queue_.push("hello I am here");
-  queue_access.unlock();
-  // va_end(args);
-  // delete [] buffer;
+  // Generate buffer string to be pushed onto the queue
+  va_list args;
+  va_start(args, fmt);
+  vsnprintf(buffer, BUFFER_SIZE, fmt, args);
+  va_end(args);
+
+  // Push message to queue for processing
+  thread_queue_ptr_->push(buffer);
   return SUCCESS;
 }
 
 void PrintRecorder::Worker(PrintRecorder *object) {
-  bool result;
+  uint32_t sleep;
   while(true) {
-    result = object->RecordingWorker();
-    if (!result)
-      boost::this_thread::sleep(boost::posix_time::milliseconds(100));
+    sleep = object->RecordingWorker();
+    boost::this_thread::sleep(boost::posix_time::milliseconds(sleep));
   }
 }
 
@@ -72,33 +83,32 @@ uint32_t PrintRecorder::RecordingWorker() {
   std::string front;
   static uint32_t count = 0;
   uint32_t result;
-  if (thread_queue_.size() >= queue_size_) {
-    for (int i = 0; i < queue_size_; ++i) {
-      // queue_access.lock();
-      front = thread_queue_.front();
-      // queue_access.unlock();
-      printf("%s\n", front.c_str());
-      queue_access.lock();
-      thread_queue_.pop();
-      queue_access.unlock();
-      result = true;
-      count = 0;
-    } 
-  } else if (thread_queue_.size() > 0 && count > queue_size_) {
-    front = thread_queue_.front();
-    printf("%s\n", front.c_str());
-    queue_access.lock();
-    thread_queue_.pop();
-    queue_access.unlock();
-    result = true;
-  } else if (thread_queue_.size() == 0) {
-    count = 0;
-    result = false;
-  } else {
-    result = false;
+  uint32_t size = thread_queue_ptr_->size();
+  if (size >= queue_size_) {
+    SWAP(thread_queue_ptr_, thread_queue_buffer_ptr_);
+    ProcessBufferQueue(thread_queue_buffer_ptr_);
+    return SLEEP_TIME;
+  } else if (size > 0) {
     count++;
+    if (count > MAX_BUFFER_SLEEP) {
+      SWAP(thread_queue_ptr_, thread_queue_buffer_ptr_);
+      ProcessBufferQueue(thread_queue_buffer_ptr_);
+      count = 0;
+    }
+    return SLEEP_TIME;
+  } else {
+    if (count < MAX_EXPO_FALLOFF) {count++;}
+    return pow(1.1,count+1);
   }
-  //return result;
+}
+
+void PrintRecorder::ProcessBufferQueue(std::queue<std::string> *buffer) {
+  std::string cat_str = "";
+  while (!buffer->empty()) {
+    cat_str += buffer->front();
+    buffer->pop();
+  }
+  printf("%s", cat_str.c_str());
 }
 
 uint32_t PrintRecorder::StartRecord() {

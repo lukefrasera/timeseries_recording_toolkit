@@ -32,7 +32,7 @@ class PrintRecorder {
  public:
   PrintRecorder(const char *filename,
                 bool output_screen=false,
-                uint32_t queue_size=64);
+                uint32_t queue_size=2048);
   virtual ~PrintRecorder();
 
   virtual uint32_t RecordPrintf(const char *fmt, ...);
@@ -41,11 +41,14 @@ class PrintRecorder {
  private:
   static void Worker(PrintRecorder *object);
   virtual uint32_t RecordingWorker();
+  virtual void ProcessBufferQueue(std::queue<std::string> *buffer);
   bool recording_;
   bool screen_;
   std::fstream file_;
-  std::queue<std::string> thread_queue_;
+  std::queue<std::string> *thread_queue_ptr_, *thread_queue_buffer_ptr_;
+  std::queue<std::string> queues[2];
   uint32_t queue_size_;
+
   boost::thread *printing_thread;
   boost::mutex queue_access;
 };

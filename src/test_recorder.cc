@@ -31,18 +31,18 @@ int main(int argc, char *argv[]) {
   boost::timer::cpu_timer timer;
   timer.start();
   for (int i = 0; i < 100000; ++i) {
-    output_test.RecordPrintf("Hello this is me printing a number really fast %d", i);
+    output_test.RecordPrintf("Hello this is me printing a number really fast %d\n", i);
   }
   timer.stop();
   fout << "First Timing: " << timer.format() << std::endl;
   output_test.StopRecord();
 
-  timer.start();
-  for (int i = 0; i < 100000; ++i) {
-    printf("Hello this is me printing a number really slow %d\n", i);
-  }
-  timer.stop();
-  fout << "Second Timing: " << timer.format() << std::endl;
-  while(true) {}
+  // timer.start();
+  // for (int i = 0; i < 100000; ++i) {
+  //   printf("Hello this is me printing a number really slow %d\n", i);
+  // }
+  // timer.stop();
+  // fout << "Second Timing: " << timer.format() << std::endl;
+  boost::this_thread::sleep(boost::posix_time::milliseconds(100000000));
   return 0;
 }
